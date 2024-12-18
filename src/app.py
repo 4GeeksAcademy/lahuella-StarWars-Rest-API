@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User
+from models import db, User, Planet, People, FavoritesPlanets, FavoritesPeople
 #from models import Person
 
 app = Flask(__name__)
@@ -36,14 +36,113 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
-def handle_hello():
+@app.route('/users', methods=['GET'])
+def get_all_users():
+    users = User.query.all()
+    return jsonify([user.serialize_User() for user in users]), 200
 
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
+@app.route('/people', methods=['GET'])
+def get_all_people():
+    people = People.query.all()
+    return jsonify([person.serialize_People() for person in people]), 200
+
+@app.route('/planets', methods=['GET'])
+def get_all_planets():
+    planets = Planet.query.all()
+    return jsonify([planet.serialize_Planet() for planet in planets]), 200
+
+@app.route('/user/<int:id>', methods=['GET'])
+def get_user(id):
+    user = User.query.get(id)
+    if user is None:
+        return jsonify({"message": "User id not found"}), 404
+    user = user.serialize_User()
+    return jsonify(user), 200
+
+@app.route('/people/<int:people_id>', methods=['GET'])
+def get_person(people_id):
+    person = People.query.get(people_id)
+    if person is None:
+        return jsonify({"message": "Person id not found"}), 404
+    return jsonify(person.serialize_People()), 200
+
+@app.route('/planets/<int:planet_id>', methods=['GET'])
+def get_planet(planet_id):
+    planet = Planet.query.get(planet_id)
+    if planet is None:
+        return jsonify({"message": "Planet id not found"}), 404
+    return jsonify(planet.serialize_Planet()), 200
+
+@app.route('/users/favorites', methods=['GET'])
+def get_user_favorites():
+    user_id = request.args.get('user_id')
+    user = User.query.get(user_id)
+    if user is None:
+        return jsonify({"error": "User not found"}), 404
+    favorites = {
+        "favorite_planets": [fav.planet_id for fav in user.favorites_planets],
+        "favorite_people": [fav.people_id for fav in user.favorites_people],
     }
+    return jsonify(favorites), 200
 
-    return jsonify(response_body), 200
+@app.route('/favorite/planet/<int:planet_id>', methods=['POST'])
+def add_favorite_planet(planet_id):
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    favorite = FavoritesPlanets(user_id=user_id, planet_id=planet_id)
+    db.session.add(favorite)
+    db.session.commit()
+
+    return jsonify({"message": "Favorite planet added"}), 201
+
+@app.route('/favorite/people/<int:people_id>', methods=['POST'])
+def add_favorite_people(people_id):
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    favorite = FavoritesPeople(user_id=user_id, people_id=people_id)
+    db.session.add(favorite)
+    db.session.commit()
+
+    return jsonify({"message": "Favorite person added"}), 201
+
+@app.route('/favorite/people/<int:people_id>', methods=['DELETE'])
+def delete_favorite_people(people_id):
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    favorite = FavoritesPeople.query.filter_by(user_id=user_id, people_id=people_id).first()
+    if not favorite:
+        return jsonify({"error": "Favorite person not found"}), 404
+
+    db.session.delete(favorite)
+    db.session.commit()
+
+    return jsonify({"message": "Favorite person deleted"}), 200
+
+
+@app.route('/favorite/planet/<int:planet_id>', methods=['DELETE'])
+def delete_favorite_planet(planet_id):
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    favorite = FavoritesPlanets.query.filter_by(user_id=user_id, planet_id=planet_id).first()
+    if not favorite:
+        return jsonify({"error": "Favorite planet not found"}), 404
+
+    db.session.delete(favorite)
+    db.session.commit()
+
+    return jsonify({"message": "Favorite planet deleted"}), 200
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
