@@ -75,14 +75,18 @@ def get_planet(planet_id):
 
 @app.route('/users/favorites', methods=['GET'])
 def get_user_favorites():
-    user_id = request.args.get('user_id')
+    data = request.get_json()
+    user_id = data.get('user_id')
+
     user = User.query.get(user_id)
     if user is None:
         return jsonify({"error": "User not found"}), 404
+
     favorites = {
-        "favorite_planets": [fav.planet_id for fav in user.favorites_planets],
-        "favorite_people": [fav.people_id for fav in user.favorites_people],
+        "favorite_planets": [{"id": fav.planet_id, "name": fav.planet.name} for fav in user.favorites_planets],
+        "favorite_people": [{"id": fav.people_id, "name": fav.people.name} for fav in user.favorites_people]
     }
+
     return jsonify(favorites), 200
 
 @app.route('/favorite/planet/<int:planet_id>', methods=['POST'])

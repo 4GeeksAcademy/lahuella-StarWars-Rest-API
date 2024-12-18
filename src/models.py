@@ -5,9 +5,9 @@ db = SQLAlchemy()
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(20), unique=False, nullable=True)
+    name = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(80), unique=False, nullable=False)
+    password = db.Column(db.String(80), nullable=False)
 
     favorites_planets = db.relationship('FavoritesPlanets', backref='user', lazy=True)
     favorites_people = db.relationship('FavoritesPeople', backref='user', lazy=True)
@@ -21,14 +21,16 @@ class User(db.Model):
             "name": self.name,
             "email": self.email,
         }
-class Planet (db.Model):
+
+
+class Planet(db.Model):
     __tablename__ = 'planets'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(20), nullable=False, unique=True)
     climate = db.Column(db.String(120), nullable=True)
     population = db.Column(db.Integer, nullable=True)
 
-    favorites = db.relationship('FavoritesPlanets', backref='planet', lazy=True)
+    favorite_planets = db.relationship('FavoritesPlanets', back_populates='planet', lazy=True)
 
     def __repr__(self):
         return '<Planet %r>' % self.name
@@ -40,6 +42,8 @@ class Planet (db.Model):
             "climate": self.climate,
             "population": self.population,
         }
+
+
 class People(db.Model):
     __tablename__ = 'people'
     id = db.Column(db.Integer, primary_key=True)
@@ -47,7 +51,8 @@ class People(db.Model):
     description = db.Column(db.String(120), nullable=True)
     hometown = db.Column(db.String(20), nullable=True)
 
-    favorites = db.relationship('FavoritesPeople', backref='person', lazy=True)
+    favorite_people = db.relationship('FavoritesPeople', back_populates='people', lazy=True)
+
     def __repr__(self):
         return '<People %r>' % self.name
 
@@ -59,12 +64,15 @@ class People(db.Model):
             "hometown": self.hometown,
         }
 
+
 class FavoritesPlanets(db.Model):
     __tablename__ = 'favorites_planets'
     id = db.Column(db.Integer, primary_key=True)
     planet_id = db.Column(db.Integer, db.ForeignKey('planets.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) 
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+    planet = db.relationship('Planet', back_populates='favorite_planets')
+    
     def __repr__(self):
         return '<Favorites_planets %r>' % self.id
 
@@ -75,11 +83,14 @@ class FavoritesPlanets(db.Model):
             "user_id": self.user_id,
         }
 
+
 class FavoritesPeople(db.Model):
     __tablename__ = 'favorites_people'
     id = db.Column(db.Integer, primary_key=True)
     people_id = db.Column(db.Integer, db.ForeignKey('people.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    people = db.relationship('People', back_populates='favorite_people')
 
     def __repr__(self):
         return '<Favorites_people %r>' % self.id
