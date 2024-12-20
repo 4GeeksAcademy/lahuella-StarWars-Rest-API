@@ -119,6 +119,43 @@ def add_favorite_people(people_id):
 
     return jsonify({"message": "Favorite person added"}), 201
 
+@app.route('/planets', methods=['POST'])
+def create_planet():
+    data = request.get_json()
+
+    name = data.get('name')
+    climate = data.get('climate')
+    population = data.get('population')
+
+    if not name or not climate or not population:
+        return jsonify({"error": "Missing fields"}), 400
+
+    new_planet = Planet(name=name, climate=climate, population=population)
+
+    db.session.add(new_planet)
+    db.session.commit()
+
+    return jsonify({"message": "Planet created", "id": new_planet.id}), 200
+
+@app.route('/people', methods=['POST'])
+def create_person():
+
+    data = request.get_json()
+
+    name = data.get('name')
+    description = data.get('description')
+    hometown = data.get('hometown')
+
+    if not name or not description or not hometown:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    new_person = People(name=name, description=description, hometown=hometown)
+
+    db.session.add(new_person)
+    db.session.commit()
+
+    return jsonify({"message": "Person created", "id": new_person.id}), 200
+
 @app.route('/favorite/people/<int:people_id>', methods=['DELETE'])
 def delete_favorite_people(people_id):
     data = request.get_json()
@@ -133,6 +170,17 @@ def delete_favorite_people(people_id):
 
     return jsonify({"message": "Favorite person deleted"}), 200
 
+@app.route('/people/<int:people_id>', methods=['DELETE'])
+def delete_person(people_id):
+    person = People.query.get(people_id)
+
+    if person is None:
+        return jsonify({"error": "Person id not found"}), 404
+
+    db.session.delete(person)
+    db.session.commit()
+
+    return jsonify({"message": "Person deleted"}), 200
 
 @app.route('/favorite/planet/<int:planet_id>', methods=['DELETE'])
 def delete_favorite_planet(planet_id):
@@ -147,6 +195,18 @@ def delete_favorite_planet(planet_id):
     db.session.commit()
 
     return jsonify({"message": "Favorite planet deleted"}), 200
+
+@app.route('/planets/<int:planet_id>', methods=['DELETE'])
+def delete_planet(planet_id):
+    planet = Planet.query.get(planet_id)
+
+    if planet is None:
+        return jsonify({"error": "Planet id not found"}), 404
+
+    db.session.delete(planet)
+    db.session.commit()
+
+    return jsonify({"message": "Planet deleted"}), 200
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
